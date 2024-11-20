@@ -1,5 +1,7 @@
 # Face Detection and Recognition Web Application
 
+# The Project is still under development!!!
+
 A Google Photos-like web application that allows users to upload photos, detect faces, predict labels, and filter photos by detected individuals.
 
 ## Features
@@ -100,6 +102,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 Your Name - your.email@example.com
 
-Project Link: https://github.com/easgarli/face-detection-project
+Project Link: https://github.com/easgarli/FaceDetectionProject
 
 
