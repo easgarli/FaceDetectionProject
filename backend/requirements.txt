@@ -5,3 +5,5 @@ torchvision
 scikit-learn
 pillow
 werkzeug
+flask-cors
+python-dotenv-1.0.1

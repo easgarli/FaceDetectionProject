@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Face Detection and Recognition Web Application">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Title -->
+    <title>Face Detection App</title>
+
+    <!-- Critical CSS -->
+    <style>
+        /* Initial loading state styles */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        #root {
+            min-height: 100vh;
+        }
+
+        .initial-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #121212;
+            z-index: 9999;
+        }
+
+        .initial-loader::after {
+            content: '';
+            width: 40px;
+            height: 40px;
+            border: 4px solid #bb86fc;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hide loader when content is loaded */
+        .loaded .initial-loader {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <noscript>You need to enable JavaScript to run this application.</noscript>
+    
+    <!-- Root element -->
+    <div id="root">
+        <div class="initial-loader"></div>
+    </div>
+
+    <!-- Modal root for portals -->
+    <div id="modal-root"></div>
+
+    <!-- Main script -->
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Remove loader class when app is loaded -->
+    <script>
+        window.addEventListener('load', () => {
+            document.body.classList.add('loaded');
+        });
+    </script>
+</body>
+</html>
