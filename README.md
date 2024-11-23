@@ -1,147 +1,175 @@
-# Face Recognition App
+# Face Recognition System
 
-A web application for face detection and recognition with label management capabilities.
+A deep learning-based face recognition system with web interface for photo management and label control.
 
-## Overview
+## Features
+- Face detection using MTCNN
+- Face recognition using FaceNet embeddings
+- KNN classification for face matching
+- Real-time processing
+- Label management system
+- Web-based user interface
 
-This application consists of:
-- Frontend: React-based UI for photo upload and management
-- Backend: Flask server handling face detection and recognition
-- Face Recognition: Using FaceNet and pre-trained models
+## Technical Stack
+- **Backend**: Flask, PyTorch, FaceNet
+- **Frontend**: React, Vite
+- **Database**: SQLite
+- **Containerization**: Podman
 
 ## Prerequisites
-
-- Docker and Docker Compose
 - Python 3.9+
 - Node.js 16+
-- Pre-trained face recognition model (`.pkl` file)
+- Podman
+- Pre-trained face recognition model (PKL file)
 
 ## Project Structure
-
 ```
 face-recognition-app/
 ├── backend/
-│   ├── static/
-│   │   └── uploaded_photos/
-│   ├── instance/
 │   ├── embeddings/
 │   │   └── face_recognition_model.pkl
+│   ├── instance/
+│   ├── static/
+│   │   └── uploaded_photos/
 │   ├── app.py
-│   ├── Dockerfile
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── Containerfile
 ├── frontend/
 │   ├── src/
-│   ├── Dockerfile
-│   └── package.json
-├── docker-compose.yml
+│   ├── package.json
+│   ├── nginx.conf
+│   └── Containerfile
 └── README.md
 ```
 
-## Setup Instructions
+## Model Details
+The system uses:
+- MTCNN for face detection
+- FaceNet (InceptionResNetV1) for feature extraction
+- KNN classifier for face recognition
+- Pre-trained on VGGFace2 dataset
 
-### 1. Model Preparation
+## Deployment Instructions
 
-Before running the application, you need to:
-1. Fine-tune the face recognition model using FaceNet
-2. Generate embeddings for your face dataset
-3. Save the model as `face_recognition_model.pkl`
-4. Place the model file in `backend/embeddings/` directory
+### Local Development
+1. Clone repository:
+```bash
+git clone <repository-url>
+cd face-recognition-app
+```
 
-### 2. Backend Setup
-
+2. Backend setup:
 ```bash
 cd backend
-
-# Create necessary directories
-mkdir -p static/uploaded_photos instance embeddings
-
-# Install dependencies
+python -m venv facenv
+source facenv/bin/activate  # or `facenv\Scripts\activate` on Windows
 pip install -r requirements.txt
-
-# Place your face_recognition_model.pkl in embeddings/
-# Make sure the model file is named: face_recognition_model.pkl
+python app.py
 ```
 
-### 3. Frontend Setup
-
+3. Frontend setup:
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Create .env file
-echo "VITE_API_URL=http://localhost:5000" > .env
+npm run dev
 ```
 
-### 4. Docker Setup
+### Podman Deployment
 
+1. Build Images:
 ```bash
-# Build containers
-docker-compose build
+# Backend
+cd backend
+podman build -t face-recognition-backend .
 
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
+# Frontend
+cd frontend
+podman build -t face-recognition-frontend .
 ```
 
-## Accessing the Application
+2. Create Pod and Run Containers:
+```bash
+# Create pod
+podman pod create --name face-recognition-app -p 5000:5000 -p 3000:80
 
-- Frontend: http://localhost
-- Backend API: http://localhost:5000
+# Run backend
+podman run -d --pod face-recognition-app \
+    --name backend \
+    -v ./backend/static/uploaded_photos:/app/static/uploaded_photos:Z \
+    -v ./backend/instance:/app/instance:Z \
+    -v ./backend/embeddings:/app/embeddings:Z \
+    face-recognition-backend
 
-## Features
+# Run frontend
+podman run -d --pod face-recognition-app \
+    --name frontend \
+    face-recognition-frontend
+```
 
-- Face Detection: Upload photos and detect faces
-- Face Recognition: Identify people in photos
-- Label Management: Edit and update person labels
-- Photo Gallery: View and manage uploaded photos
-- Explore View: Filter photos by person
+3. Check Status:
+```bash
+podman pod ps
+podman logs backend
+podman logs frontend
+```
+
+### Remote Deployment
+
+1. Transfer files:
+```bash
+rsync -avz \
+    --exclude 'node_modules' \
+    --exclude '.git' \
+    --exclude '__pycache__' \
+    --exclude 'dist' \
+    --exclude 'facenv' \
+    --exclude '*.pyc' \
+    ./ user@remote-ip:~/face-recognition-app/
+```
+
+2. SSH and deploy:
+```bash
+ssh user@remote-ip
+cd face-recognition-app
+# Follow Podman deployment steps above
+```
 
 ## API Endpoints
-
 - `POST /upload`: Upload photos
-- `GET /photos`: Get all photos
-- `GET /labels`: Get all person labels
-- `POST /update-label`: Update person labels
+- `GET /photos`: List all photos
+- `POST /detect`: Detect faces
+- `PUT /label`: Update labels
 
-## Development
+## Environment Variables
+Backend:
+```env
+FLASK_ENV=development
+FLASK_APP=app.py
+```
 
-For local development:
-1. Ensure Docker is running
-2. Use `docker-compose up` to start services
-3. Frontend code changes will auto-reload
-4. Backend changes require service restart
+Frontend:
+```env
+VITE_API_URL=http://localhost:5000
+```
 
-## Production Deployment
-
-For production:
-1. Update `VITE_API_URL` in frontend/.env to your server IP
-2. Configure SSL/TLS
-3. Set up proper CORS rules
-4. Enable production mode in Flask
-5. Configure proper security measures
-
-## Notes
-
-- The application requires a pre-trained face recognition model
-- Model file must be named `face_recognition_model.pkl`
-- Photos are stored in `backend/static/uploaded_photos/`
-- Database is stored in `backend/instance/`
+## Performance
+Classification Report:
+```
+              precision  recall  f1-score  support
+fidan           0.78     0.80     0.79      59
+leyla           0.72     0.90     0.80      58
+others          0.58     0.26     0.36      27
+```
 
 ## Troubleshooting
-
 Common issues:
-1. Model file not found: Ensure `face_recognition_model.pkl` is in correct location
-2. Upload errors: Check folder permissions
-3. Connection issues: Verify API URL in frontend .env file
+1. Port conflicts: Change ports in pod creation
+2. Permission issues: Add :Z to volume mounts
+3. Model not found: Check embeddings directory
+4. Container fails: Check logs with `podman logs`
+
+## Contributing
+MIT License
 
 ## License
-
-MIT
-
-## Contributors
-
 Elnur Asgarli
