@@ -1,0 +1,29 @@
+FROM docker.io/pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy and install requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create necessary directories
+RUN mkdir -p static/uploaded_photos \
+    instance \
+    embeddings
+
+# Copy your existing files and folders
+COPY embeddings/ embeddings/
+COPY static/uploaded_photos/ static/uploaded_photos/
+COPY instance/ instance/
+COPY app.py .
+
+EXPOSE 5000
+
+CMD ["python", "app.py"] 

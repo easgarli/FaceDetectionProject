@@ -1,0 +1,126 @@
+Face Recognition System - Presentation Guidelines
+
+Slide 1: Title
+- Title: "Face Recognition System with Deep Learning"
+- Your Name
+- Data Science Course Project
+- Date
+
+Slide 2: Project Overview
+Goals:
+- Implementation of Deep Learning for face recognition
+- Transfer Learning using pre-trained FaceNet
+- Data augmentation for improved model performance
+- Real-time face detection and classification
+
+Slide 3: Deep Learning Architecture
+- FaceNet Architecture (InceptionResnetV1)
+  * Pre-trained on VGGFace2
+  * Feature extraction
+  * Face embeddings
+- Transfer Learning Strategy
+  * Frozen pre-trained weights
+  * KNN classifier for face recognition
+
+Slide 4: Data Pipeline
+Flow diagram:
+1. Data Collection
+2. Augmentation
+3. Face Detection (MTCNN)
+4. Feature Extraction
+5. Classification (KNN)
+
+Code example:
+augmentation_pipeline = transforms.Compose([
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(degrees=15),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.Resize((160, 160)),
+])
+
+Slide 5: Data Augmentation
+Techniques Applied:
+- Random horizontal flips
+- Rotation (±15 degrees)
+- Brightness/contrast adjustment
+- Consistent sizing (160x160)
+
+Results:
+- 5x increase in training data
+- Improved model robustness
+- Better handling of variations
+
+Slide 6: Model Implementation
+Code snippet:
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+mtcnn = MTCNN(keep_all=False, device=device)
+resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
+embedding = resnet(face.unsqueeze(0).to(device))
+
+Slide 7: Training Process
+Steps:
+1. Face Detection using MTCNN
+2. Feature Extraction using FaceNet
+3. KNN Training (n_neighbors=3)
+
+Code:
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(train_embeddings, train_labels)
+
+Slide 8: Model Evaluation
+Classification Report:
+              precision  recall  f1-score  support
+fidan           0.78     0.80     0.79      59
+leyla           0.72     0.90     0.80      58
+others          0.58     0.26     0.36      27
+
+accuracy                          0.74     144
+macro avg       0.70     0.65     0.65     144
+weighted avg    0.72     0.74     0.71     144
+
+Slide 9: Web Application
+Technical Implementation:
+- Flask Backend API
+- React Frontend
+- Real-time processing
+- SQLite database for label management
+[Include application screenshot]
+
+Slide 10: System Architecture
+Detailed diagram showing:
+1. Deep Learning Pipeline
+   - MTCNN → FaceNet → KNN
+2. Data Flow
+   - Upload → Process → Store
+3. Label Management
+   - Database schema
+   - Label normalization
+
+Slide 11: Deployment
+- Podman containerization
+- Remote server deployment
+- Volume management for data persistence
+- API endpoints and networking
+
+Slide 12: Future Improvements
+Model Enhancements:
+- Fine-tuning FaceNet layers
+- Exploring other architectures (DLIB, DeepFace)
+- Implementing face clustering
+- Advanced data augmentation techniques
+
+Slide 13: Questions
+Thank You!
+
+Key Achievements:
+- 74% Overall Accuracy
+- Successful Transfer Learning Implementation
+- Scalable Deep Learning Pipeline
+[Your Contact Information]
+
+Presentation Tips:
+1. Focus on the deep learning aspects
+2. Show live demo if possible
+3. Highlight technical challenges and solutions
+4. Prepare for technical questions about model architecture
+5. Include visualizations of results

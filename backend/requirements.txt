@@ -2,8 +2,6 @@ flask
 flask-cors
 facenet-pytorch
 torch
-torchvision
-scikit-learn
 pillow
 werkzeug
 python-dotenv
