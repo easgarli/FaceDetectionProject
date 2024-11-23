@@ -36,19 +36,20 @@ function PhotoUpload({ onUploadComplete }) {
         }
     };
 
+    const handleFileChange = async (event) => {
+        await handleUpload(event);
+        onUploadComplete();
+    };
+
     return (
-        <div className="mb-6">
+        <div>
             <input
+                id="file-upload"
                 type="file"
                 multiple
-                onChange={handleUpload}
-                accept="image/*"
-                disabled={isUploading}
-                className="mb-4"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
             />
-            {isUploading && (
-                <div className="text-blue-600">Uploading photos...</div>
-            )}
         </div>
     );
 }

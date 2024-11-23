@@ -5,8 +5,6 @@ import Photos from './pages/Photos';
 import './styles/index.css';
 import { PhotoProvider } from './context/PhotoContext';
 import { useState } from 'react';
-import PhotoUpload from './components/PhotoUpload';
-import PhotoGrid from './components/PhotoGrid';
 
 function App() {
   const [shouldRefreshPhotos, setShouldRefreshPhotos] = useState(false);
@@ -19,11 +17,17 @@ function App() {
     <PhotoProvider>
       <Router>
         <div className="app">
-          <Sidebar />
+          <Sidebar onUploadComplete={handleUploadComplete} />
           <main className="main-content">
             <Routes>
-              <Route path="/" element={<Photos />} />
-              <Route path="/photos" element={<Photos />} />
+              <Route 
+                path="/" 
+                element={<Photos key={shouldRefreshPhotos} />} 
+              />
+              <Route 
+                path="/photos" 
+                element={<Photos key={shouldRefreshPhotos} />} 
+              />
               <Route path="/explore" element={<ExploreView />} />
             </Routes>
           </main>

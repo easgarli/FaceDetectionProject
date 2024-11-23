@@ -1,9 +1,9 @@
 flask
+flask-cors
 facenet-pytorch
 torch
 torchvision
 scikit-learn
 pillow
 werkzeug
-flask-cors
-python-dotenv-1.0.1
+python-dotenv

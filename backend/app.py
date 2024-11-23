@@ -50,12 +50,23 @@ def get_db():
 def init_db():
     """Initialize database schema"""
     with get_db() as conn:
+        # Photos table
         conn.execute("""
         CREATE TABLE IF NOT EXISTS photos (
             id INTEGER PRIMARY KEY,
             file_path TEXT NOT NULL,
             thumbnail_path TEXT NOT NULL,
             labels TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # Label mappings table to track label changes
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS label_mappings (
+            id INTEGER PRIMARY KEY,
+            original_label TEXT NOT NULL,
+            current_label TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)
@@ -96,6 +107,64 @@ def create_thumbnail(image_path, size=(300, 200)):
         
     return thumbnail_name
 
+def normalize_label(label, existing_labels):
+    """Match a label with existing labels case-insensitively and partially"""
+    if not label:
+        return label
+    
+    print(f"Normalizing label: {label}")
+    print(f"Existing labels: {existing_labels}")
+    
+    # Convert to lowercase for comparison
+    label_lower = label.lower().strip()
+    
+    # First try exact match
+    for existing_label in existing_labels:
+        if existing_label.lower().strip() == label_lower:
+            print(f"Exact match found! Returning: {existing_label}")
+            return existing_label
+    
+    # Then try partial match
+    for existing_label in existing_labels:
+        if label_lower in existing_label.lower() or existing_label.lower() in label_lower:
+            print(f"Partial match found! Returning: {existing_label}")
+            return existing_label
+    
+    print(f"No match found. Returning original: {label}")
+    return label
+
+def get_all_existing_labels():
+    """Fetch all existing labels from the database"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT labels FROM photos WHERE labels != ''")
+        rows = cursor.fetchall()
+        
+        # Create a set of all unique labels
+        all_labels = set()
+        for row in rows:
+            if row[0]:  # if labels exist
+                # Split the comma-separated labels and add each one
+                labels = row[0].split(',')
+                all_labels.update(label.strip() for label in labels if label.strip())
+        
+        print("All existing labels:", all_labels)  # Debug log
+        return all_labels
+
+def get_current_label(original_label):
+    """Get the most recent mapping for a label"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT current_label 
+            FROM label_mappings 
+            WHERE original_label = ? 
+            ORDER BY timestamp DESC 
+            LIMIT 1
+        """, (original_label,))
+        result = cursor.fetchone()
+        return result[0] if result else original_label
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'photos' not in request.files:
@@ -115,21 +184,36 @@ def upload_file():
                 filename = secure_filename(file.filename)
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
                 
-                print(f"Saving file to: {filepath}")
+                print(f"Processing file: {filepath}")
                 file.save(filepath)
                 
                 # Create thumbnail
                 thumb_name = create_thumbnail(filepath)
                 
-                # Store both paths in database
+                # Detect faces and get labels
+                img = Image.open(filepath)
+                faces = mtcnn(img)
+                if faces is not None:
+                    face_embeddings = resnet(faces).detach().cpu()
+                    predictions = knn.predict(face_embeddings)
+                    
+                    # Get current versions of predicted labels
+                    current_labels = [get_current_label(pred) for pred in predictions]
+                    labels = ",".join(set(current_labels))
+                else:
+                    labels = ""
+                
+                print(f"Final labels for file: {labels}")
+                
                 cursor.execute("""
                     INSERT INTO photos (file_path, thumbnail_path, labels)
                     VALUES (?, ?, ?)
-                """, (filename, thumb_name, ""))
+                """, (filename, thumb_name, labels))
                 
                 results.append({
                     'filename': filename,
                     'thumbnail': thumb_name,
+                    'labels': labels.split(',') if labels else [],
                     'status': 'success'
                 })
         
@@ -144,7 +228,7 @@ def get_all_photos():
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT file_path, thumbnail_path, labels 
+            SELECT file_path, thumbnail_path, labels, timestamp 
             FROM photos 
             ORDER BY id DESC
         """)
@@ -158,7 +242,8 @@ def get_all_photos():
                 valid_photos.append({
                     "path": filename,
                     "thumbnail": thumb_name,
-                    "labels": row[2].split(",") if row[2] else []
+                    "labels": row[2].split(",") if row[2] else [],
+                    "timestamp": row[3]
                 })
     
     return jsonify({
@@ -205,6 +290,50 @@ def debug_files():
         ] if os.path.exists(UPLOAD_FOLDER) else [],
         "upload_dir": UPLOAD_FOLDER
     })
+
+@app.route('/labels', methods=['GET'])
+def get_all_labels():
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT labels FROM photos WHERE labels != ''")
+        all_labels = cursor.fetchall()
+        
+        # Process labels
+        unique_labels = set()
+        for row in all_labels:
+            if row[0]:  # if labels exist
+                labels = row[0].split(',')
+                unique_labels.update(label.strip() for label in labels if label.strip())
+        
+        return jsonify({
+            "labels": sorted(list(unique_labels))
+        })
+
+@app.route('/update-label', methods=['POST'])
+def update_label():
+    data = request.json
+    old_label = data.get('oldLabel')
+    new_label = data.get('newLabel')
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        # Add new mapping
+        cursor.execute("""
+            INSERT INTO label_mappings (original_label, current_label)
+            VALUES (?, ?)
+        """, (old_label, new_label))
+        
+        # Update all photos that have the old label
+        cursor.execute("""
+            UPDATE photos 
+            SET labels = REPLACE(labels, ?, ?)
+            WHERE labels LIKE ?
+        """, (old_label, new_label, f'%{old_label}%'))
+        
+        conn.commit()
+    
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     print(f"Starting server... (using {device})")

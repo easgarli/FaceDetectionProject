@@ -67,7 +67,13 @@ function PhotoGrid() {
     };
 
     const formatDate = (timestamp) => {
-        return new Date(timestamp).toLocaleString();
+        if (!timestamp) return ''; // Handle missing timestamp
+        try {
+            return new Date(timestamp).toLocaleString();
+        } catch (error) {
+            console.log('Date error:', error, 'timestamp:', timestamp);
+            return '';
+        }
     };
 
     const downloadImage = async (photo) => {
@@ -98,21 +104,36 @@ function PhotoGrid() {
     }, []);
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto p-8">
+            {/* Welcome Message */}
+            <div style={{
+                backgroundColor: '#1f2937',
+                padding: '20px',
+                marginBottom: '24px',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '28px',
+                fontWeight: '500'
+            }}>
+                You will see all of your uploaded photos here
+            </div>
+
+            {/* Photos Grid */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '1rem',
-                maxWidth: '1200px',
-                margin: '0 auto'
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: '24px',
+                padding: '20px',
+                backgroundColor: '#1f2937',
+                borderRadius: '8px',
+                width: '100%'
             }}>
                 {photos.map((photo, index) => (
                     <div 
                         key={index}
                         style={{
-                            width: '100%',
-                            height: '200px',
                             position: 'relative',
+                            aspectRatio: '1',
                             overflow: 'hidden',
                             borderRadius: '8px',
                             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
@@ -129,19 +150,6 @@ function PhotoGrid() {
                                 objectFit: 'cover'
                             }}
                         />
-                        <div style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            background: 'rgba(0,0,0,0.5)',
-                            color: 'white',
-                            padding: '0.5rem'
-                        }}>
-                            <p style={{ fontSize: '0.875rem', margin: 0 }}>
-                                {photo.labels.join(', ')}
-                            </p>
-                        </div>
                     </div>
                 ))}
             </div>
@@ -217,9 +225,10 @@ function PhotoGrid() {
                                         </button>
                                     </div>
                                     <div className="text-sm">
-                                        {selectedPhoto.labels.join(', ')}
-                                        <br />
-                                        {formatDate(selectedPhoto.timestamp)}
+                                        <div>{selectedPhoto.labels.join(', ')}</div>
+                                        {selectedPhoto.timestamp && 
+                                            <div>{formatDate(selectedPhoto.timestamp)}</div>
+                                        }
                                     </div>
                                 </div>
                             </div>

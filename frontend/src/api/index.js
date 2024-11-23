@@ -33,13 +33,28 @@ export const photoAPI = {
         if (!response.ok) throw new Error('Failed to fetch photos');
         return response.json();
     },
-    
+    getAllLabels: async () => {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/labels`);
+        if (!response.ok) throw new Error('Failed to fetch labels');
+        return response.json();
+    },
     uploadPhotos: async (formData) => {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
             method: 'POST',
-            body: formData
+            body: formData,
         });
         if (!response.ok) throw new Error('Failed to upload photos');
+        return response.json();
+    },
+    updateLabel: async (oldLabel, newLabel) => {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/update-label`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ oldLabel, newLabel }),
+        });
+        if (!response.ok) throw new Error('Failed to update label');
         return response.json();
     }
 };
