@@ -29,49 +29,19 @@ const apiCall = async (endpoint, options = {}) => {
 
 export const photoAPI = {
     getAllPhotos: async () => {
-        try {
-            const response = await fetch(`${API_URL}/photos`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('getAllPhotos error:', error);
-            throw new Error('Failed to fetch photos');
-        }
-    },
-
-    uploadPhotos: async (formData) => {
-        const response = await fetch(`${API_URL}/upload`, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-            },
-            body: formData
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || `API call failed: ${response.statusText}`);
-        }
-
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/photos`);
+        if (!response.ok) throw new Error('Failed to fetch photos');
         return response.json();
     },
-
-    getPhotosByLabel: (label) => apiCall(`/photos/${encodeURIComponent(label)}`),
-
-    getPhotoById: (photoId) => apiCall(`/photos/${photoId}`),
-
-    deletePhoto: (photoId) => apiCall(`/photos/${photoId}`, {
-        method: 'DELETE',
-    }),
+    
+    uploadPhotos: async (formData) => {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) throw new Error('Failed to upload photos');
+        return response.json();
+    }
 };
 
 export const labelAPI = {

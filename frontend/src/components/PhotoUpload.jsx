@@ -6,89 +6,48 @@ import {
     validateImageDimensions 
 } from '../utils/imageOptimization';
 
-function PhotoUpload() {
-    const [uploading, setUploading] = useState(false);
-    const [progress, setProgress] = useState([]);
-    const [error, setError] = useState(null);
+function PhotoUpload({ onUploadComplete }) {
+    const [isUploading, setIsUploading] = useState(false);
 
     const handleUpload = async (event) => {
-        const files = event.target.files;
-        if (!files.length) return;
-
-        setUploading(true);
-        setError(null);
-        setProgress([]);
-
         try {
+            setIsUploading(true);
             const formData = new FormData();
-            Array.from(files).forEach((file) => {
-                formData.append('photos', file);
-            });
-
-            setProgress(prev => [...prev, 'Uploading to server...']);
+            const files = event.target.files;
             
-            const result = await photoAPI.uploadPhotos(formData);
-            
-            setProgress(prev => [
-                ...prev, 
-                'Upload complete!',
-                ...result.map(photo => 
-                    `Detected faces in ${photo.file}: ${photo.labels.join(', ') || 'None'}`
-                )
-            ]);
-
-            if (typeof onUploadComplete === 'function') {
-                onUploadComplete(result);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('photos', files[i]);
             }
-
+            
+            await photoAPI.uploadPhotos(formData);
+            
+            // Reset the file input
+            event.target.value = '';
+            
+            // Notify parent component that upload is complete
+            if (onUploadComplete) {
+                onUploadComplete();
+            }
+            
         } catch (error) {
-            console.error('Upload failed:', error);
-            setError(error.message || 'Upload failed');
+            console.error('Upload error:', error);
         } finally {
-            setUploading(false);
+            setIsUploading(false);
         }
     };
 
     return (
-        <div className="photo-upload p-4 border rounded-lg">
+        <div className="mb-6">
             <input
                 type="file"
                 multiple
-                accept="image/*"
                 onChange={handleUpload}
-                disabled={uploading}
-                className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100
-                    disabled:opacity-50"
+                accept="image/*"
+                disabled={isUploading}
+                className="mb-4"
             />
-            
-            {/* Progress Messages */}
-            {progress.length > 0 && (
-                <div className="mt-4 space-y-2">
-                    {progress.map((message, index) => (
-                        <p key={index} className="text-sm text-gray-600">
-                            {message}
-                        </p>
-                    ))}
-                </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-                <p className="mt-2 text-sm text-red-500">
-                    Error: {error}
-                </p>
-            )}
-
-            {/* Upload Status */}
-            {uploading && (
-                <div className="mt-4">
-                    <div className="animate-pulse bg-blue-100 h-2 rounded-full" />
-                </div>
+            {isUploading && (
+                <div className="text-blue-600">Uploading photos...</div>
             )}
         </div>
     );

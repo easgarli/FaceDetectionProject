@@ -54,6 +54,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS photos (
             id INTEGER PRIMARY KEY,
             file_path TEXT NOT NULL,
+            thumbnail_path TEXT NOT NULL,
             labels TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -68,6 +69,32 @@ def ensure_directories():
 # Initialize app
 ensure_directories()
 init_db()
+
+def create_thumbnail(image_path, size=(300, 200)):
+    """Create a thumbnail version of the uploaded image"""
+    thumbnail_name = f"thumb_{os.path.basename(image_path)}"
+    thumbnail_path = os.path.join(UPLOAD_FOLDER, thumbnail_name)
+    
+    with Image.open(image_path) as img:
+        # Convert to RGB if needed
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        
+        # Calculate dimensions maintaining aspect ratio
+        img.thumbnail(size, Image.Resampling.LANCZOS)
+        
+        # Create new image with exact dimensions
+        thumb = Image.new('RGB', size, (255, 255, 255))
+        
+        # Paste resized image centered
+        offset = ((size[0] - img.size[0]) // 2,
+                 (size[1] - img.size[1]) // 2)
+        thumb.paste(img, offset)
+        
+        # Save thumbnail
+        thumb.save(thumbnail_path, 'JPEG', quality=85)
+        
+    return thumbnail_name
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -91,16 +118,18 @@ def upload_file():
                 print(f"Saving file to: {filepath}")
                 file.save(filepath)
                 
-                # Your face detection code here...
-                # For now, storing placeholder labels
+                # Create thumbnail
+                thumb_name = create_thumbnail(filepath)
+                
+                # Store both paths in database
                 cursor.execute("""
-                    INSERT INTO photos (file_path, labels)
-                    VALUES (?, ?)
-                """, (filepath, ""))
+                    INSERT INTO photos (file_path, thumbnail_path, labels)
+                    VALUES (?, ?, ?)
+                """, (filename, thumb_name, ""))
                 
                 results.append({
                     'filename': filename,
-                    'filepath': filepath,
+                    'thumbnail': thumb_name,
                     'status': 'success'
                 })
         
@@ -115,7 +144,7 @@ def get_all_photos():
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT file_path, labels 
+            SELECT file_path, thumbnail_path, labels 
             FROM photos 
             ORDER BY id DESC
         """)
@@ -124,10 +153,12 @@ def get_all_photos():
         valid_photos = []
         for row in photos:
             filename = os.path.basename(row[0])
-            if filename in existing_files:
+            thumb_name = row[1]
+            if filename in existing_files and thumb_name in existing_files:
                 valid_photos.append({
                     "path": filename,
-                    "labels": row[1].split(",") if row[1] else []
+                    "thumbnail": thumb_name,
+                    "labels": row[2].split(",") if row[2] else []
                 })
     
     return jsonify({

@@ -4,8 +4,17 @@ import ExploreView from './components/ExploreView';
 import Photos from './pages/Photos';
 import './styles/index.css';
 import { PhotoProvider } from './context/PhotoContext';
+import { useState } from 'react';
+import PhotoUpload from './components/PhotoUpload';
+import PhotoGrid from './components/PhotoGrid';
 
 function App() {
+  const [shouldRefreshPhotos, setShouldRefreshPhotos] = useState(false);
+
+  const handleUploadComplete = () => {
+    setShouldRefreshPhotos(prev => !prev);
+  };
+
   return (
     <PhotoProvider>
       <Router>
