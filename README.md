@@ -2,6 +2,9 @@
 
 A deep learning-based face recognition system with web interface for photo management and label control.
 
+## Presentation is available at 
+https://docs.google.com/presentation/d/11goJALVAzFKwUOgDDz5O3_1OvpuqU9Wsu3-GoWeNxQs/edit?usp=sharing
+
 ## Features
 - Face detection using MTCNN
 - Face recognition using FaceNet embeddings
