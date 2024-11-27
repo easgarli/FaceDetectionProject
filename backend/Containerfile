@@ -24,6 +24,9 @@ COPY static/uploaded_photos/ static/uploaded_photos/
 COPY instance/ instance/
 COPY app.py .
 
+# Install gunicorn
+RUN pip install gunicorn
+
 EXPOSE 5000
 
-CMD ["python", "app.py"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"] 

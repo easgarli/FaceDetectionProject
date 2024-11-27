@@ -8,12 +8,20 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 import torch
 import pickle
 from PIL import Image
+import logging
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
+# Trust the Nginx proxy
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 CORS(app)
 
 # Configure paths and settings
@@ -255,41 +263,41 @@ def get_all_photos():
 def serve_upload(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-@app.route('/debug/config')
-def debug_config():
-    return jsonify({
-        'upload_folder': UPLOAD_FOLDER,
-        'database_path': DATABASE_PATH,
-        'upload_folder_exists': os.path.exists(UPLOAD_FOLDER),
-        'database_exists': os.path.exists(DATABASE_PATH),
-        'current_working_dir': os.getcwd(),
-        'upload_contents': os.listdir(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else []
-    })
+# @app.route('/debug/config')
+# def debug_config():
+#     return jsonify({
+#         'upload_folder': UPLOAD_FOLDER,
+#         'database_path': DATABASE_PATH,
+#         'upload_folder_exists': os.path.exists(UPLOAD_FOLDER),
+#         'database_exists': os.path.exists(DATABASE_PATH),
+#         'current_working_dir': os.getcwd(),
+#         'upload_contents': os.listdir(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else []
+#     })
 
-@app.route('/debug/database')
-def debug_database():
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT file_path, labels FROM photos")
-        photos = cursor.fetchall()
-        return jsonify({
-            "database_entries": [{
-                "file_path": row[0],
-                "labels": row[1]
-            } for row in photos]
-        })
+# @app.route('/debug/database')
+# def debug_database():
+#     with get_db() as conn:
+#         cursor = conn.cursor()
+#         cursor.execute("SELECT file_path, labels FROM photos")
+#         photos = cursor.fetchall()
+#         return jsonify({
+#             "database_entries": [{
+#                 "file_path": row[0],
+#                 "labels": row[1]
+#             } for row in photos]
+#         })
 
-@app.route('/debug/files')
-def debug_files():
-    """Debug endpoint to check file system status"""
-    return jsonify({
-        "files": os.listdir(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else [],
-        "full_paths": [
-            os.path.join(UPLOAD_FOLDER, f) 
-            for f in os.listdir(UPLOAD_FOLDER)
-        ] if os.path.exists(UPLOAD_FOLDER) else [],
-        "upload_dir": UPLOAD_FOLDER
-    })
+# @app.route('/debug/files')
+# def debug_files():
+#     """Debug endpoint to check file system status"""
+#     return jsonify({
+#         "files": os.listdir(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else [],
+#         "full_paths": [
+#             os.path.join(UPLOAD_FOLDER, f) 
+#             for f in os.listdir(UPLOAD_FOLDER)
+#         ] if os.path.exists(UPLOAD_FOLDER) else [],
+#         "upload_dir": UPLOAD_FOLDER
+#     })
 
 @app.route('/labels', methods=['GET'])
 def get_all_labels():
@@ -335,6 +343,40 @@ def update_label():
     
     return jsonify({'success': True})
 
+# Add error handler
+@app.errorhandler(404)
+def not_found_error(error):
+    logger.error(f"404 error: {request.url}")
+    return jsonify({'error': 'Resource not found'}), 404
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    message = str(error)
+    status_code = 500
+    if hasattr(error, 'code'):
+        status_code = error.code
+    return jsonify({'error': message}), status_code
+
+@app.route('/')
+def index():
+    return jsonify({
+        'status': 'ok',
+        'message': 'Face Recognition API is running'
+    })
+
+# Security headers
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
 if __name__ == '__main__':
     print(f"Starting server... (using {device})")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Production settings
+    app.config['DEBUG'] = False
+    app.config['ENV'] = 'production'
+    # Disable debug mode
+    app.run(host='0.0.0.0', port=5000, debug=False)

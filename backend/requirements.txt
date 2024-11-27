@@ -5,3 +5,4 @@ torch
 pillow
 werkzeug
 python-dotenv
+scikit-learn

@@ -30,7 +30,7 @@ function PhotoUpload({ onUploadComplete }) {
             }
             
         } catch (error) {
-            console.error('Upload error:', error);
+            // console.error('Upload failed:', error);
         } finally {
             setIsUploading(false);
         }
